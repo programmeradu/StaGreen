@@ -20,6 +20,7 @@ jobs:
         cd server
         npm install
         npm start &
+      shell: pwsh
 
     - name: Build and Start Client
       run: |
@@ -27,6 +28,7 @@ jobs:
         npm install
         npm run build
         npm start &
+      shell: pwsh
 
     - name: Build and Start Truck Dashboard
       run: |
@@ -34,3 +36,4 @@ jobs:
         npm install
         npm run build
         npm start &
+      shell: pwsh

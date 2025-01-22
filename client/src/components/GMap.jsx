@@ -8,4 +8,6 @@ import {
   DirectionsRenderer,
 } from "@react-google-maps/api";
 
-const GMap = () => {};
+const GMap = () => {
+  ret;
+};
