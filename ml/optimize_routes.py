@@ -83,7 +83,14 @@ def create_routes_for_area(pickup_df, depot_location, truck_capacity_kg, max_sto
             pickup_weight = next_pickup['approxGarbageWeight']
 
             if current_route_weight + pickup_weight <= truck_capacity_kg:
-                current_route.append(next_pickup['requestId'])
+                # Append a dictionary with desired details
+                current_route.append({
+                    "requestId": next_pickup['requestId'],
+                    "latitude": next_pickup['latitude'],
+                    "longitude": next_pickup['longitude'],
+                    "approxGarbageWeight": next_pickup['approxGarbageWeight']
+                    # Add other fields from next_pickup if needed, e.g., next_pickup.get('pickUpAddress')
+                })
                 current_route_weight += pickup_weight
                 current_location = (next_pickup['latitude'], next_pickup['longitude'])
                 remaining_pickups = remaining_pickups.drop(closest_pickup_idx)
@@ -125,10 +132,8 @@ def create_routes_for_area(pickup_df, depot_location, truck_capacity_kg, max_sto
 
     return all_routes
 
-if __name__ == '__main__':
-
-    return all_routes
-
+# Duplicated __main__ block was removed from the original file during a previous edit.
+# The following is the correct single __main__ block.
 if __name__ == '__main__':
     try:
         input_json_str = sys.stdin.read()
