@@ -1,160 +1,172 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { 
+    TextField, 
+    Button, 
+    Box, 
+    Typography, 
+    Paper, 
+    Table, 
+    TableBody, 
+    TableCell, 
+    TableContainer, 
+    TableHead, 
+    TableRow, 
+    CircularProgress,
+    Alert,
+    Grid,
+    Fade 
+} from '@mui/material';
 import { getWastePredictionsAPI } from '../../api/api';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import ErrorMessage from '../../components/ErrorMessage';
 
-// Basic styling (can be moved to a CSS file or styled components)
-const styles = {
-  section: {
-    padding: '20px',
-    margin: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    fontFamily: 'Arial, sans-serif',
-  },
-  inputGroup: {
-    marginBottom: '10px',
-  },
-  label: {
-    marginRight: '10px',
-  },
-  input: {
-    marginRight: '20px',
-    padding: '5px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-  },
-  button: {
-    padding: '8px 15px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
-  loading: {
-    color: '#555',
-  },
-  error: {
-    color: 'red',
-  },
-  table: {
-    marginTop: '20px',
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  th: {
-    borderBottom: '1px solid #ddd',
-    padding: '8px',
-    textAlign: 'left',
-    backgroundColor: '#f7f7f7',
-  },
-  td: {
-    borderBottom: '1px solid #ddd',
-    padding: '8px',
-  }
-};
 
 const WastePredictionSection = () => {
   const [predictionsData, setPredictionsData] = useState(null);
-  const [loading, setLoading] = useState(false); // Default to false, true when fetch starts
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(''); // Initialize with empty string for Alert
   const [area, setArea] = useState('Accra'); // Default area
   const [days, setDays] = useState('7');   // Default days as string for input field
+  const [areaError, setAreaError] = useState('');
+  const [daysError, setDaysError] = useState('');
 
-  const fetchPredictions = useCallback(async () => {
-    if (!area || !days) {
-      setError("Area and Days are required.");
-      return;
+  const validateInputs = () => {
+    let isValid = true;
+    if (!area.trim()) {
+      setAreaError('Area is required.');
+      isValid = false;
+    } else {
+      setAreaError('');
     }
+
     const daysInt = parseInt(days, 10);
     if (isNaN(daysInt) || daysInt <= 0) {
-      setError("Days must be a positive number.");
+      setDaysError('Days must be a positive integer.');
+      isValid = false;
+    } else {
+      setDaysError('');
+    }
+    return isValid;
+  };
+
+  const fetchPredictions = useCallback(async () => {
+    if (!validateInputs()) {
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setPredictionsData(null); // Clear previous data
+    setError('');
+    setPredictionsData(null);
 
     try {
+      const daysInt = parseInt(days, 10);
       const result = await getWastePredictionsAPI(area, daysInt);
       if (result && result.error) {
-        setError(result.error); // Handle errors returned from API (e.g., backend script error)
+        setError(result.error);
       } else if (result) {
         setPredictionsData(result);
       } else {
-        setError('Failed to fetch predictions. No data returned.');
+        setError('Failed to fetch predictions. No data returned or unexpected format.');
       }
     } catch (e) {
-      // This catch block handles network errors or errors thrown by getWastePredictionsAPI itself
       console.error("Fetch predictions error:", e);
       setError(e.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
-  }, [area, days]); // Dependencies for useCallback
+  }, [area, days]);
 
-  // Optional: Fetch predictions on initial mount if desired, or rely on button click.
-  // For this example, we'll rely on the button click.
-  // useEffect(() => {
-  //   fetchPredictions();
-  // }, [fetchPredictions]); // fetchPredictions is memoized by useCallback
 
   return (
-    <div style={styles.section}>
-      <h2>Waste Predictions</h2>
-      <div style={styles.inputGroup}>
-        <label htmlFor="areaInput" style={styles.label}>Area:</label>
-        <input
-          type="text"
-          id="areaInput"
+    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h5" gutterBottom component="div">
+        Waste Predictions
+      </Typography>
+      
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <TextField
+          label="Area"
+          variant="outlined"
           value={area}
           onChange={(e) => setArea(e.target.value)}
-          style={styles.input}
+          error={!!areaError}
+          helperText={areaError}
+          disabled={loading}
+          sx={{ flexGrow: 1 }}
         />
-        <label htmlFor="daysInput" style={styles.label}>Days:</label>
-        <input
+        <TextField
+          label="Days to Predict"
+          variant="outlined"
           type="number"
-          id="daysInput"
           value={days}
           onChange={(e) => setDays(e.target.value)}
-          min="1"
-          style={styles.input}
+          error={!!daysError}
+          helperText={daysError}
+          inputProps={{ min: "1" }}
+          disabled={loading}
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         />
-        <button onClick={fetchPredictions} disabled={loading} style={styles.button}>
-          {loading ? 'Fetching...' : 'Fetch Predictions'}
-        </button>
-      </div>
+        <Button 
+          variant="contained" 
+          onClick={fetchPredictions} 
+          disabled={loading}
+          size="large"
+          sx={{ height: '56px' }} // Match TextField height
+        >
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Fetch Predictions'}
+        </Button>
+      </Box>
 
-      {loading && <p style={styles.loading}>Loading predictions...</p>}
-      {error && <p style={styles.error}>Error: {error}</p>}
+      <ErrorMessage error={error} title="Prediction Error" />
 
-      {predictionsData && !error && (
-        <div>
-          <h3>Predictions for {predictionsData.area}</h3>
-          {predictionsData.predictions && predictionsData.predictions.length > 0 ? (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Date</th>
-                  <th style={styles.th}>Predicted Waste (kg/tons)</th> 
-                  {/* Clarify unit with backend or assume one */}
-                </tr>
-              </thead>
-              <tbody>
-                {predictionsData.predictions.map((item, index) => (
-                  <tr key={index}>
-                    <td style={styles.td}>{item.date}</td>
-                    <td style={styles.td}>{item.predicted_waste}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No predictions available for this area and timeframe.</p>
-          )}
-        </div>
+      {loading && !error && ( // Show loader only if no error is present
+        <LoadingSpinner sx={{ my: 3 }} />
       )}
-    </div>
+      
+      <Fade in={predictionsData && !error && !loading} timeout={500}>
+        <Box>
+          {predictionsData && !error && !loading && (
+            <>
+              <Typography variant="h6" gutterBottom component="div" sx={{mt: 2}}>
+                Predictions for {predictionsData.area}
+              </Typography>
+              {predictionsData.predictions && predictionsData.predictions.length > 0 ? (
+                <TableContainer component={Paper} elevation={2}>
+                  <Table aria-label="predictions table">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: 'primary.main' }}>
+                        <TableCell sx={{ color: 'common.white', fontWeight: 'bold' }}>Date</TableCell>
+                        <TableCell sx={{ color: 'common.white', fontWeight: 'bold' }} align="right">Predicted Waste (kg/tons)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {predictionsData.predictions.map((item, index) => (
+                        <TableRow 
+                          key={index}
+                          sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' }, '&:last-child td, &:last-child th': { border: 0 } }}
+                        >
+                          <TableCell component="th" scope="row">
+                            {item.date}
+                          </TableCell>
+                          <TableCell align="right">{item.predicted_waste}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography sx={{ mt: 2 }}>
+                  No predictions available for this area and timeframe.
+                </Typography>
+              )}
+              <Typography variant="caption" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
+                Chart visualization of predictions will be displayed here.
+              </Typography>
+            </>
+          )}
+        </Box>
+      </Fade>
+    </Paper>
   );
 };
 

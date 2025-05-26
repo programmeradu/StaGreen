@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react'; // Removed useEffect as it wasn't used for initial fetch
 import { MapContainer, TileLayer, Marker, Popup, Polyline, GeoJSON } from 'react-leaflet';
-import L from 'leaflet'; // Import L for leaflet specific functionalities like L.circleMarker
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { TextField, Button, Box, Typography, Paper, CircularProgress, Alert, Skeleton, Grid } from '@mui/material';
 import { getOptimizedRoutesAPI, getPickupHeatmapDataAPI } from '../../api/api';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import ErrorMessage from '../../components/ErrorMessage';
 
 // Fix for default Leaflet marker icons (Webpack issue)
 // Ensure you have 'file-loader' or similar for image assets if using require,
@@ -23,70 +26,7 @@ try {
 }
 
 
-// Basic styling (can be moved to a CSS file or styled components)
-const styles = {
-  section: {
-    padding: '20px',
-    margin: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-    fontFamily: 'Arial, sans-serif',
-  },
-  inputGroup: {
-    marginBottom: '15px',
-  },
-  label: {
-    marginRight: '10px',
-  },
-  input: {
-    marginRight: '20px',
-    padding: '8px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '16px',
-  },
-  button: {
-    padding: '10px 18px',
-    backgroundColor: '#28a745', // Green color for this button
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    marginRight: '10px',
-  },
-  loading: {
-    color: '#555',
-    fontStyle: 'italic',
-  },
-  error: {
-    color: 'red',
-    fontWeight: 'bold',
-  },
-  dataContainer: {
-    marginTop: '20px',
-    padding: '15px',
-    backgroundColor: '#f9f9f9',
-    border: '1px solid #eee',
-    borderRadius: '4px',
-  },
-  pre: {
-    whiteSpace: 'pre-wrap', // Handles long lines
-    wordBreak: 'break-all', // Breaks long words/strings
-    maxHeight: '300px',
-    overflowY: 'auto', // Scroll for long content
-    backgroundColor: '#fff',
-    padding: '10px',
-    border: '1px solid #ddd',
-  },
-  mapContainer: {
-    height: '500px', // Specific height for the map
-    width: '100%',
-    marginTop: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '8px',
-  }
-};
+// Note: Removed the 'styles' object as styling will be handled by MUI sx props or styled-components
 
 // Helper to get today's date in YYYY-MM-DD format
 const getTodayDateString = () => {
@@ -102,11 +42,12 @@ const WmsMapSection = () => {
   const [heatmapData, setHeatmapData] = useState(null);
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [loadingHeatmap, setLoadingHeatmap] = useState(false);
-  const [errorRoutes, setErrorRoutes] = useState(null);
-  const [errorHeatmap, setErrorHeatmap] = useState(null);
+  const [errorRoutes, setErrorRoutes] = useState(''); // Initialize with empty string for Alert
+  const [errorHeatmap, setErrorHeatmap] = useState(''); // Initialize with empty string for Alert
   const [date, setDate] = useState(getTodayDateString()); // Default to today
   const [mapCenter, setMapCenter] = useState([5.6037, -0.1870]); // Default: Accra
   const [mapZoom, setMapZoom] = useState(13); // Default zoom
+  const [dateError, setDateError] = useState('');
 
   // Function to update map center if data is available
   const updateMapCenter = useCallback((data) => {
@@ -128,26 +69,38 @@ const WmsMapSection = () => {
   }, []);
 
 
+  const validateDate = (selectedDate) => {
+    if (!selectedDate) {
+      setDateError('Date is required.');
+      return false;
+    }
+    // Basic regex for YYYY-MM-DD, can be more robust if needed
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+        setDateError('Invalid date format. Please use YYYY-MM-DD.');
+        return false;
+    }
+    setDateError('');
+    return true;
+  };
+
   const fetchRoutes = useCallback(async () => {
-    if (!date) {
-      setErrorRoutes("Date is required to fetch routes.");
+    if (!validateDate(date)) {
+      setErrorRoutes(dateError || "Date is required to fetch routes."); // Use dateError if set
       return;
     }
     setLoadingRoutes(true);
-    setErrorRoutes(null);
+    setErrorRoutes('');
     setRoutesData(null);
 
     try {
       const result = await getOptimizedRoutesAPI(date);
       if (result && result.error) {
         setErrorRoutes(result.error);
-        setRoutesData(null); // Clear data on error
-      } else if (result && result.routes) { // Assuming result has a .routes property
+      } else if (result && result.routes) {
         setRoutesData(result);
-        // updateMapCenter({ routes: result.routes }); // Update center based on route data - potentially
+        // updateMapCenter({ routes: result.routes }); // Potentially update center
       } else {
-        setErrorRoutes('Failed to fetch routes or no routes found.');
-        setRoutesData(null);
+        setErrorRoutes('No routes found or data is in unexpected format.');
       }
     } catch (e) {
       console.error("Fetch routes error:", e);
@@ -155,28 +108,26 @@ const WmsMapSection = () => {
     } finally {
       setLoadingRoutes(false);
     }
-  }, [date]);
+  }, [date, dateError, updateMapCenter]);
 
   const fetchHeatmap = useCallback(async () => {
-    if (!date) {
-      setErrorHeatmap("Date is required to fetch heatmap data.");
+    if (!validateDate(date)) {
+      setErrorHeatmap(dateError || "Date is required to fetch heatmap data.");
       return;
     }
     setLoadingHeatmap(true);
-    setErrorHeatmap(null);
+    setErrorHeatmap('');
     setHeatmapData(null);
 
     try {
       const result = await getPickupHeatmapDataAPI(date);
       if (result && result.error) {
         setErrorHeatmap(result.error);
-        setHeatmapData(null); // Clear data on error
-      } else if (result && result.features) { // GeoJSON data should have features
+      } else if (result && result.features) {
         setHeatmapData(result);
-        updateMapCenter(result); // Update map center based on heatmap data if no route data
+        updateMapCenter(result);
       } else {
-        setErrorHeatmap('Failed to fetch heatmap data or no features found.');
-        setHeatmapData(null);
+        setErrorHeatmap('No heatmap features found or data is in unexpected format.');
       }
     } catch (e) {
       console.error("Fetch heatmap error:", e);
@@ -184,40 +135,68 @@ const WmsMapSection = () => {
     } finally {
       setLoadingHeatmap(false);
     }
-  }, [date]);
+  }, [date, dateError, updateMapCenter]);
 
   const handleFetchAll = () => {
-    fetchRoutes();
-    fetchHeatmap();
+    // Ensure date is validated once before fetching both
+    if (validateDate(date)) {
+        fetchRoutes();
+        fetchHeatmap();
+    } else {
+        // If date is invalid, set errors for both sections to give feedback
+        setErrorRoutes(dateError || "A valid date is required.");
+        setErrorHeatmap(dateError || "A valid date is required.");
+    }
   };
   
-  // Optional: Fetch on initial mount for the default date
-  // useEffect(() => {
-  //   handleFetchAll();
-  // }, []); // Empty dependency array means only on mount
-
   return (
-    <div style={styles.section}>
-      <h2>WMS Map Data Viewer</h2>
-      <div style={styles.inputGroup}>
-        <label htmlFor="dateInputMap" style={styles.label}>Date:</label>
-        <input
+    <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h5" gutterBottom component="div">
+        WMS Map Data Viewer
+      </Typography>
+      
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <TextField
           type="date"
-          id="dateInputMap"
+          label="Select Date"
           value={date}
-          onChange={(e) => setDate(e.target.value)}
-          style={styles.input}
+          onChange={(e) => {
+            setDate(e.target.value);
+            if (dateError) validateDate(e.target.value); // Re-validate if there was an error
+          }}
+          error={!!dateError}
+          helperText={dateError}
+          InputLabelProps={{ shrink: true }}
+          disabled={loadingRoutes || loadingHeatmap}
+          sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: '180px' }}
         />
-        <button onClick={handleFetchAll} disabled={loadingRoutes || loadingHeatmap} style={styles.button}>
-          {loadingRoutes || loadingHeatmap ? 'Fetching...' : 'Fetch Map Data'}
-        </button>
-        {/* You could also have separate buttons:
-        <button onClick={fetchRoutes} disabled={loadingRoutes} style={styles.button}>Fetch Routes</button>
-        <button onClick={fetchHeatmap} disabled={loadingHeatmap} style={styles.button}>Fetch Heatmap</button>
-        */}
-      </div>
+        <Button 
+          variant="contained" 
+          onClick={handleFetchAll} 
+          disabled={loadingRoutes || loadingHeatmap}
+          size="large" // Make button a bit larger to match TextField height
+          sx={{ height: '56px' }} // Match TextField height
+        >
+          {loadingRoutes || loadingHeatmap ? <CircularProgress size={24} color="inherit" /> : 'Fetch Map Data'}
+        </Button>
+      </Box>
 
-      <div style={styles.mapContainer}>
+      <ErrorMessage error={errorRoutes} title="Route Data Error" sx={{ mb: 1 }} />
+      <ErrorMessage error={errorHeatmap} title="Heatmap Data Error" sx={{ mb: 2 }} />
+
+
+      {(loadingRoutes || loadingHeatmap) && !(routesData || heatmapData) ? ( 
+        // Show main spinner instead of Skeleton when both are loading and no data is yet available for the map area
+        <LoadingSpinner sx={{ height: 500, my: 2, border: '1px solid #ccc', borderRadius: '8px', boxSizing: 'border-box' }} />
+      ) : (
+        <Box sx={{ 
+            height: '500px', 
+            width: '100%', 
+            marginTop: '20px', 
+            border: '1px solid #ccc', 
+            borderRadius: '8px',
+            position: 'relative' // For potential overlay of individual loaders if needed
+        }}>
         <MapContainer center={mapCenter} zoom={mapZoom} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -226,13 +205,11 @@ const WmsMapSection = () => {
 
           {/* Render Optimized Routes */}
           {routesData && routesData.routes && routesData.routes.map((route, routeIndex) => {
-            // Assuming route is an array of pickup objects with lat/lon
-            // This structure needs to be confirmed/adjusted based on actual API output in Step 3
             const positions = route
               .filter(p => typeof p.latitude === 'number' && typeof p.longitude === 'number')
               .map(pickup => [pickup.latitude, pickup.longitude]);
             
-            const routeColor = ['blue', 'green', 'purple', 'orange'][routeIndex % 4]; // Cycle through some colors
+            const routeColor = ['blue', 'green', 'purple', 'orange'][routeIndex % 4];
 
             return (
               <React.Fragment key={`route-${routeIndex}`}>
@@ -241,9 +218,9 @@ const WmsMapSection = () => {
                   (typeof pickup.latitude === 'number' && typeof pickup.longitude === 'number') && (
                     <Marker key={`route-${routeIndex}-pickup-${pickupIndex}`} position={[pickup.latitude, pickup.longitude]}>
                       <Popup>
-                        Request ID: {pickup.requestId || 'N/A'} <br />
-                        Weight: {pickup.approxGarbageWeight || 'N/A'} kg <br />
-                        Order in route: {pickupIndex + 1}
+                        <div><strong>Request ID:</strong> {pickup.requestId || 'N/A'}</div>
+                        <div><strong>Weight:</strong> {pickup.approxGarbageWeight || 'N/A'} kg</div>
+                        <div><strong>Order in route:</strong> {pickupIndex + 1}</div>
                       </Popup>
                     </Marker>
                   )
@@ -252,7 +229,7 @@ const WmsMapSection = () => {
             );
           })}
 
-          {/* Render Heatmap/Pickup Distribution Data */}
+          {/* Render Heatmap Data */}
           {heatmapData && heatmapData.features && (
             <GeoJSON 
               data={heatmapData} 
@@ -274,39 +251,50 @@ const WmsMapSection = () => {
               }}
               onEachFeature={(feature, layer) => {
                 if (feature.properties) {
+                  // Simple HTML content for popup
                   layer.bindPopup(
-                    `Request ID: ${feature.properties.requestId || 'N/A'}<br/>
-                     Type: ${feature.properties.garbageType || 'N/A'}<br/>
-                     Weight: ${feature.properties.approxGarbageWeight || 'N/A'} kg`
+                    `<div><strong>Request ID:</strong> ${feature.properties.requestId || 'N/A'}</div>
+                     <div><strong>Type:</strong> ${feature.properties.garbageType || 'N/A'}</div>
+                     <div><strong>Weight:</strong> ${feature.properties.approxGarbageWeight || 'N/A'} kg</div>`
                   );
                 }
               }}
             />
           )}
         </MapContainer>
-      </div>
+       </Box>
+      )}
       
-      {/* Data display sections can be kept for debugging or removed if map is primary view */}
-      <div style={styles.dataContainer}>
-        <h3>Optimized Routes Data (Raw)</h3>
-        {loadingRoutes && <p style={styles.loading}>Loading routes...</p>}
-        {errorRoutes && <p style={styles.error}>Error fetching routes: {errorRoutes}</p>}
-        {routesData && !errorRoutes && (
-          <pre style={styles.pre}>{JSON.stringify(routesData, null, 2)}</pre>
-        )}
-        {!loadingRoutes && !errorRoutes && !routesData && <p>No route data loaded or available for the selected date.</p>}
-      </div>
-
-      <div style={styles.dataContainer}>
-        <h3>Pickup Heatmap Data (GeoJSON - Raw)</h3>
-        {loadingHeatmap && <p style={styles.loading}>Loading heatmap data...</p>}
-        {errorHeatmap && <p style={styles.error}>Error fetching heatmap data: {errorHeatmap}</p>}
-        {heatmapData && !errorHeatmap && (
-          <pre style={styles.pre}>{JSON.stringify(heatmapData, null, 2)}</pre>
-        )}
-         {!loadingHeatmap && !errorHeatmap && !heatmapData && <p>No heatmap data loaded or available for the selected date.</p>}
-      </div>
-    </div>
+      {/* Raw JSON Data Display (Optional for debugging) */}
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Grid item xs={12} md={6}>
+          <Paper elevation={1} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Optimized Routes Data (Raw)</Typography>
+            {loadingRoutes && !routesData && <LoadingSpinner size={24} />}
+            <ErrorMessage error={errorRoutes} title="Routes Error" sx={{ mt: 1 }} />
+            {routesData && !errorRoutes && (
+              <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '300px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
+                {JSON.stringify(routesData, null, 2)}
+              </Box>
+            )}
+            {!loadingRoutes && !errorRoutes && !routesData && <Typography variant="body2">No route data loaded.</Typography>}
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper elevation={1} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>Pickup Heatmap Data (GeoJSON - Raw)</Typography>
+            {loadingHeatmap && !heatmapData && <LoadingSpinner size={24} />}
+            <ErrorMessage error={errorHeatmap} title="Heatmap Error" sx={{ mt: 1 }} />
+            {heatmapData && !errorHeatmap && (
+               <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '300px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
+                {JSON.stringify(heatmapData, null, 2)}
+              </Box>
+            )}
+            {!loadingHeatmap && !errorHeatmap && !heatmapData && <Typography variant="body2">No heatmap data loaded.</Typography>}
+          </Paper>
+        </Grid>
+      </Grid>
+    </Paper>
   );
 };
 
