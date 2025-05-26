@@ -1,6 +1,7 @@
 import Express from "express";
 import { addUser, getUsers, addPickUp, getPickUp, getPickUpList, trackPickUp, deleteRequestU, getNotifications, addContact } from "../controllers/citizen-controller.js";
 import { getAllPickUpRequests, getPendingPickUpRequests, getIdleTrucks, getTrucksList, getAvailableSlot, addRoute, getRoute, pickUpComplete } from "../controllers/admin-controller.js";
+import { getWastePrediction, getOptimizedRoutes } from "../controllers/ml-controller.js";
 
 const route = Express.Router();
 
@@ -41,6 +42,10 @@ route.get('/addRoute', addRoute);  //get information of available time slot
 route.put('/pickUpComplete', pickUpComplete); //
 
 
+//--------------------------------------------------------------------
+// ML Features
+route.get('/api/ml/waste-prediction', getWastePrediction);
+route.get('/api/ml/optimize-routes', getOptimizedRoutes);
 
 
 export default route;
