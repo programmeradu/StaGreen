@@ -65,7 +65,9 @@
     "simplebar": "^5.3.8",
     "simplebar-react": "^2.4.1",
     "web-vitals": "^2.1.4",
-    "yup": "^0.32.11"
+    "yup": "^0.32.11",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1"
   },
   "devDependencies": {
     "@babel/core": "^7.18.6",

@@ -1,0 +1,90 @@
+name: StaGreen CI
+
+on:
+  push:
+    branches: [ main ] # Or your primary branch, e.g., master, develop
+  pull_request:
+    branches: [ main ] # Or your primary branch
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Specify a version, e.g., LTS
+
+      - name: Install WMS dependencies and Lint
+        working-directory: ./wms
+        run: |
+          npm install 
+          npm run lint
+
+      - name: Install Client dependencies and Lint
+        working-directory: ./client
+        run: |
+          npm install
+          npm run lint
+      
+      # Server linting - skip for now as no lint script, can add later
+      # Truck Dashboard linting - skip for now as no lint script, can add later
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' # Specify a version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ml/requirements.txt
+      
+      - name: Lint Python code with flake8
+        run: |
+          flake8 ml/ cv/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Example flake8 command:
+          # E9: syntax error or IndentationError
+          # F63: Local variable name ... is assigned to but never used
+          # F7: an undefined name ... was used
+          # F82: undefined name ... in __all__
+          # You can customize these rules
+
+  build:
+    name: Build Applications
+    runs-on: ubuntu-latest
+    needs: lint # This job depends on the lint job succeeding
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install WMS dependencies and Build
+        working-directory: ./wms
+        run: |
+          npm install
+          npm run build
+
+      - name: Install Client dependencies and Build
+        working-directory: ./client
+        run: |
+          npm install
+          npm run build
+
+      - name: Install Truck Dashboard dependencies and Build
+        working-directory: ./truck-dashboard
+        run: |
+          npm install
+          npm run build
+      
+      - name: Install Server dependencies
+        working-directory: ./server
+        run: npm install # No build script, just install dependencies
