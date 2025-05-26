@@ -182,3 +182,69 @@ export const getOptimizedRoutes = async (request, response) => {
         return sendJsonResponse(response, 500, { error: 'Database error while fetching pickup requests.' });
     }
 };
+
+export const getPickupHeatmapData = async (request, response) => {
+    const { date } = request.query;
+
+    // Validate date
+    if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return sendJsonResponse(response, 400, { error: 'Invalid date format. Please use YYYY-MM-DD.' });
+    }
+
+    const queryDate = new Date(date);
+    if (isNaN(queryDate.getTime())) {
+        return sendJsonResponse(response, 400, { error: 'Invalid date value.' });
+    }
+
+    try {
+        const startOfDay = new Date(queryDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(queryDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        const pickupRequests = await PickUpRequest.find({
+            date: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            },
+            // Fetching 'Completed' and 'Scheduled' statuses for the heatmap
+            requestStatus: { $in: ['Completed', 'Scheduled'] } 
+        }).select('requestId latitude longitude garbageType approxGarbageWeight');
+
+        const features = pickupRequests.reduce((acc, pickup) => {
+            // Ensure latitude and longitude are present and are valid numbers
+            const latitude = parseFloat(pickup.latitude);
+            const longitude = parseFloat(pickup.longitude);
+
+            if (pickup.latitude != null && pickup.longitude != null && !isNaN(latitude) && !isNaN(longitude)) {
+                acc.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [longitude, latitude] // GeoJSON is [lon, lat]
+                    },
+                    properties: {
+                        requestId: pickup.requestId,
+                        garbageType: pickup.garbageType,
+                        // Ensure approxGarbageWeight is a number, default to 0 if not parseable
+                        approxGarbageWeight: parseFloat(pickup.approxGarbageWeight) || 0
+                    }
+                });
+            } else {
+                console.warn(`Skipping pickup request ${pickup.requestId} due to missing or invalid coordinates.`);
+            }
+            return acc;
+        }, []);
+
+        const geoJsonData = {
+            type: "FeatureCollection",
+            features: features
+        };
+
+        return sendJsonResponse(response, 200, geoJsonData);
+
+    } catch (dbError) {
+        console.error(`Database error while fetching pickup requests for heatmap on date "${date}": ${dbError.message}`);
+        return sendJsonResponse(response, 500, { error: 'Database error while fetching pickup heatmap data.' });
+    }
+};

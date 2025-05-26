@@ -1,7 +1,8 @@
 import Express from "express";
 import { addUser, getUsers, addPickUp, getPickUp, getPickUpList, trackPickUp, deleteRequestU, getNotifications, addContact } from "../controllers/citizen-controller.js";
 import { getAllPickUpRequests, getPendingPickUpRequests, getIdleTrucks, getTrucksList, getAvailableSlot, addRoute, getRoute, pickUpComplete } from "../controllers/admin-controller.js";
-import { getWastePrediction, getOptimizedRoutes } from "../controllers/ml-controller.js";
+import { getWastePrediction, getOptimizedRoutes, getPickupHeatmapData } from "../controllers/ml-controller.js";
+import { detectBinsInImage } from "../controllers/cv-controller.js";
 
 const route = Express.Router();
 
@@ -46,6 +47,13 @@ route.put('/pickUpComplete', pickUpComplete); //
 // ML Features
 route.get('/api/ml/waste-prediction', getWastePrediction);
 route.get('/api/ml/optimize-routes', getOptimizedRoutes);
+
+// Spatial Analysis Features
+route.get('/api/spatial/pickup-heatmap', getPickupHeatmapData);
+
+//--------------------------------------------------------------------
+// Computer Vision Features
+route.post('/api/cv/detect-bins', detectBinsInImage);
 
 
 export default route;
