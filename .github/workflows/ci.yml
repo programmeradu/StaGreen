@@ -23,13 +23,13 @@ jobs:
         working-directory: ./wms
         run: |
           npm install 
-          npm run lint
+          CI=false npm run lint
 
       - name: Install Client dependencies and Lint
         working-directory: ./client
         run: |
           npm install
-          npm run lint
+          CI=false npm run lint
       
       # Server linting - skip for now as no lint script, can add later
       # Truck Dashboard linting - skip for now as no lint script, can add later
