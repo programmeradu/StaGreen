@@ -5,7 +5,7 @@ from PIL import Image
 
 def detect_bins(image_identifier):
     print(f"Python script: Processing image_identifier: {image_identifier}", file=sys.stderr)
-    
+
     if not os.path.exists(image_identifier) or not os.path.isfile(image_identifier):
         print(f"Error: File not found or not a file: {image_identifier}", file=sys.stderr)
         return {
@@ -19,9 +19,9 @@ def detect_bins(image_identifier):
             img_format = img.format
             img_size = img.size
             img_mode = img.mode
-            
+
             # Attempt to load image data to catch truncated images, etc.
-            img.load() 
+            img.load()
 
             print(f"Image properties: Format={img_format}, Size={img_size}, Mode={img_mode}", file=sys.stderr)
             return {
@@ -32,7 +32,7 @@ def detect_bins(image_identifier):
                     "height": img_size[1],
                     "mode": img_mode
                 },
-                "detected_bins": [ 
+                "detected_bins": [
                     # Placeholder for actual bin detection data if any
                     # For now, we can add a dummy detected bin based on image size for variety
                     {"bin_id": "bin_dummy_001", "type": "general", "confidence": 0.5, "location_in_image": [0, 0, img_size[0]//2, img_size[1]//2]}

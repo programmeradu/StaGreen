@@ -23,7 +23,7 @@ const ErrorMessage = ({ error, title, sx }) => {
   } else if (typeof error === 'object' && Object.keys(error).length === 0) {
     // If error is an empty object, do not render anything or use a default.
     // This case should ideally be caught by the initial check, but as a safeguard.
-    return null; 
+    return null;
   }
 
 

@@ -1,20 +1,20 @@
 import React, { useState, useCallback } from 'react';
-import { 
-    TextField, 
-    Button, 
-    Box, 
-    Typography, 
-    Paper, 
-    Table, 
-    TableBody, 
-    TableCell, 
-    TableContainer, 
-    TableHead, 
-    TableRow, 
+import {
+    TextField,
+    Button,
+    Box,
+    Typography,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
     CircularProgress,
     // Alert, // Removed as ErrorMessage component is used
     // Grid, // Removed as not used
-    Fade 
+    Fade
 } from '@mui/material';
 import { getWastePredictionsAPI } from '../../api/api';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -82,7 +82,7 @@ const WastePredictionSection = () => {
       <Typography variant="h5" gutterBottom component="div">
         Waste Predictions
       </Typography>
-      
+
       <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
         <TextField
           label="Area"
@@ -106,9 +106,9 @@ const WastePredictionSection = () => {
           disabled={loading}
           sx={{ width: { xs: '100%', sm: 'auto' } }}
         />
-        <Button 
-          variant="contained" 
-          onClick={fetchPredictions} 
+        <Button
+          variant="contained"
+          onClick={fetchPredictions}
           disabled={loading}
           size="large"
           sx={{ height: '56px' }} // Match TextField height
@@ -122,7 +122,7 @@ const WastePredictionSection = () => {
       {loading && !error && ( // Show loader only if no error is present
         <LoadingSpinner sx={{ my: 3 }} />
       )}
-      
+
       <Fade in={predictionsData && !error && !loading} timeout={500}>
         <Box>
           {predictionsData && !error && !loading && (
@@ -141,7 +141,7 @@ const WastePredictionSection = () => {
                     </TableHead>
                     <TableBody>
                       {predictionsData.predictions.map((item, index) => (
-                        <TableRow 
+                        <TableRow
                           key={index}
                           sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' }, '&:last-child td, &:last-child th': { border: 0 } }}
                         >

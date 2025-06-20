@@ -155,13 +155,13 @@ const WmsMapSection = () => {
         setErrorHeatmap(dateError || "A valid date is required.");
     }
   };
-  
+
   return (
     <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
       <Typography variant="h5" gutterBottom component="div">
         WMS Map Data Viewer
       </Typography>
-      
+
       <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
         <TextField
           type="date"
@@ -177,9 +177,9 @@ const WmsMapSection = () => {
           disabled={loadingRoutes || loadingHeatmap}
           sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: '180px' }}
         />
-        <Button 
-          variant="contained" 
-          onClick={handleFetchAll} 
+        <Button
+          variant="contained"
+          onClick={handleFetchAll}
           disabled={loadingRoutes || loadingHeatmap}
           size="large" // Make button a bit larger to match TextField height
           sx={{ height: '56px' }} // Match TextField height
@@ -192,15 +192,15 @@ const WmsMapSection = () => {
       <ErrorMessage error={errorHeatmap} title="Heatmap Data Error" sx={{ mb: 2 }} />
 
 
-      {(loadingRoutes || loadingHeatmap) && !(routesData || heatmapData) ? ( 
+      {(loadingRoutes || loadingHeatmap) && !(routesData || heatmapData) ? (
         // Show main spinner instead of Skeleton when both are loading and no data is yet available for the map area
         <LoadingSpinner sx={{ height: 500, my: 2, border: '1px solid #ccc', borderRadius: '8px', boxSizing: 'border-box' }} />
       ) : (
-        <Box sx={{ 
-            height: '500px', 
-            width: '100%', 
-            marginTop: '20px', 
-            border: '1px solid #ccc', 
+        <Box sx={{
+            height: '500px',
+            width: '100%',
+            marginTop: '20px',
+            border: '1px solid #ccc',
             borderRadius: '8px',
             position: 'relative' // For potential overlay of individual loaders if needed
         }}>
@@ -215,7 +215,7 @@ const WmsMapSection = () => {
             const positions = route
               .filter(p => typeof p.latitude === 'number' && typeof p.longitude === 'number')
               .map(pickup => [pickup.latitude, pickup.longitude]);
-            
+
             const routeColor = ['blue', 'green', 'purple', 'orange'][routeIndex % 4];
 
             return (
@@ -238,8 +238,8 @@ const WmsMapSection = () => {
 
           {/* Render Heatmap Data */}
           {heatmapData && heatmapData.features && (
-            <GeoJSON 
-              data={heatmapData} 
+            <GeoJSON
+              data={heatmapData}
               pointToLayer={(feature, latlng) => {
                 // Default style for heatmap points (can be customized further)
                 const weight = feature.properties.approxGarbageWeight || 0;
@@ -247,13 +247,13 @@ const WmsMapSection = () => {
                 if (weight > 100) radius = 10;
                 if (weight > 200) radius = 15;
 
-                return L.circleMarker(latlng, { 
-                  radius: radius, 
+                return L.circleMarker(latlng, {
+                  radius: radius,
                   fillColor: 'rgba(255,0,0,0.6)', // Semi-transparent red
-                  color: '#ff0000', 
-                  weight: 1, 
-                  opacity: 1, 
-                  fillOpacity: 0.6 
+                  color: '#ff0000',
+                  weight: 1,
+                  opacity: 1,
+                  fillOpacity: 0.6
                 });
               }}
               onEachFeature={(feature, layer) => {
@@ -271,7 +271,7 @@ const WmsMapSection = () => {
         </MapContainer>
        </Box>
       )}
-      
+
       {/* Raw JSON Data Display (Optional for debugging) */}
       <Grid container spacing={2} sx={{ mt: 2 }}>
         <Grid item xs={12} md={6}>

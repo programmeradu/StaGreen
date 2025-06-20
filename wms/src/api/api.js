@@ -109,7 +109,7 @@ export const getWastePredictionsAPI = async (area, days) => {
     try {
         const url = `http://localhost:8000/api/ml/waste-prediction?area=${encodeURIComponent(area)}&days=${days}`;
         const res = await fetch(url);
-        
+
         // It's good practice to check if the response is ok before parsing JSON
         if (!res.ok) {
             // Try to parse error response from backend if available
@@ -119,7 +119,7 @@ export const getWastePredictionsAPI = async (area, days) => {
             // For now, returning what the backend sent or a generic error
             return errorData || { error: `HTTP error! status: ${res.status}` };
         }
-        
+
         const response = await res.json();
         return response;
     } catch (error) {
@@ -133,13 +133,13 @@ export const getOptimizedRoutesAPI = async (date) => {
     try {
         const url = `http://localhost:8000/api/ml/optimize-routes?date=${date}`;
         const res = await fetch(url);
-        
+
         if (!res.ok) {
             const errorData = await res.json().catch(() => null);
             console.error('Error fetching optimized routes:', res.status, res.statusText, errorData);
             return errorData || { error: `HTTP error! status: ${res.status}` };
         }
-        
+
         const response = await res.json();
         return response;
     } catch (error) {
@@ -152,13 +152,13 @@ export const getPickupHeatmapDataAPI = async (date) => {
     try {
         const url = `http://localhost:8000/api/spatial/pickup-heatmap?date=${date}`;
         const res = await fetch(url);
-        
+
         if (!res.ok) {
             const errorData = await res.json().catch(() => null);
             console.error('Error fetching pickup heatmap data:', res.status, res.statusText, errorData);
             return errorData || { error: `HTTP error! status: ${res.status}` };
         }
-        
+
         const response = await res.json();
         return response;
     } catch (error) {

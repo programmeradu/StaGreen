@@ -84,7 +84,7 @@ export const getOptimizedRoutes = async (request, response) => {
     if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return sendJsonResponse(response, 400, { error: 'Invalid date format. Please use YYYY-MM-DD.' });
     }
-    
+
     const queryDate = new Date(date); // Convert to Date object for MongoDB query
     if (isNaN(queryDate.getTime())) {
         return sendJsonResponse(response, 400, { error: 'Invalid date value.' });
@@ -125,7 +125,7 @@ export const getOptimizedRoutes = async (request, response) => {
             truck_capacity_kg,
             max_stops_per_route
         };
-        
+
         console.log(`Spawning route optimization script: python ${scriptPath}`);
         const pythonProcess = spawn('python', [scriptPath]);
 
@@ -208,7 +208,7 @@ export const getPickupHeatmapData = async (request, response) => {
                 $lte: endOfDay
             },
             // Fetching 'Completed' and 'Scheduled' statuses for the heatmap
-            requestStatus: { $in: ['Completed', 'Scheduled'] } 
+            requestStatus: { $in: ['Completed', 'Scheduled'] }
         }).select('requestId latitude longitude garbageType approxGarbageWeight');
 
         const features = pickupRequests.reduce((acc, pickup) => {
