@@ -9,7 +9,7 @@ const LoadingSpinner = ({ size = 40, sx }) => (
       justifyContent: 'center',
       alignItems: 'center',
       py: 2, // Default padding, can be overridden by sx prop
-      ...sx
+      ...sx,
     }}
   >
     <CircularProgress size={size} />
@@ -18,7 +18,7 @@ const LoadingSpinner = ({ size = 40, sx }) => (
 
 LoadingSpinner.propTypes = {
   size: PropTypes.number,
-  sx: PropTypes.object
+  sx: PropTypes.object,
 };
 
 export default LoadingSpinner;
