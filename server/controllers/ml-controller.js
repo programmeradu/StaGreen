@@ -1,11 +1,13 @@
-import { spawn } from 'child_process';
-import path from 'path';
+import fetch from 'node-fetch';
 import PickUpRequest from '../models/pickup_request.js'; // For getOptimizedRoutes
 
 // Helper function to send JSON responses
 const sendJsonResponse = (response, statusCode, data) => {
     response.status(statusCode).json(data);
 };
+
+// FastAPI ML service URL - configurable via environment variable
+const ML_API_URL = process.env.ML_API_URL || 'http://localhost:8001';
 
 export const getWastePrediction = async (request, response) => {
     const { area, days } = request.query;
@@ -21,60 +23,42 @@ export const getWastePrediction = async (request, response) => {
         return sendJsonResponse(response, 400, { error: 'Days must be a positive integer.' });
     }
 
-    // Define paths - assuming server is run from its own directory 'server/'
-    // So, '../ml/' points to the 'ml/' directory at the project root.
-    const scriptPath = path.resolve(process.cwd(), '../ml/predict_waste.py');
-    const modelsDir = path.resolve(process.cwd(), '../ml/models/');
+    try {
+        // Call FastAPI ML service for predictions
+        const mlResponse = await fetch(`${ML_API_URL}/predict/fill-levels`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                predictions: [
+                    {
+                        bin_id: `area_${area}`,
+                        timestamp: new Date().toISOString(),
+                        area: area,
+                        prediction_days: daysInt
+                    }
+                ]
+            }),
+        });
 
-    console.log(`Spawning waste prediction script: python ${scriptPath} "${area}" ${daysInt} "${modelsDir}"`);
-
-    const pythonProcess = spawn('python', [scriptPath, area, daysInt.toString(), modelsDir]);
-
-    let stdoutData = '';
-    let stderrData = '';
-
-    pythonProcess.stdout.on('data', (data) => {
-        stdoutData += data.toString();
-    });
-
-    pythonProcess.stderr.on('data', (data) => {
-        stderrData += data.toString();
-        console.error(`Waste Prediction Script STDERR: ${data.toString()}`);
-    });
-
-    pythonProcess.on('close', (code) => {
-        console.log(`Waste Prediction Script exited with code ${code}`);
-        if (stderrData || code !== 0) {
-            console.error(`Error during waste prediction for area "${area}": ${stderrData || `Exited with code ${code}`}`);
-            // Attempt to parse stderrData if it contains a JSON error from the script
-            try {
-                const errorJson = JSON.parse(stderrData);
-                if (errorJson.error) {
-                    return sendJsonResponse(response, 500, { error: `Prediction script error: ${errorJson.error}` });
-                }
-            } catch (e) {
-                // Not a JSON error from script, or malformed
-            }
-            return sendJsonResponse(response, 500, { error: 'Error during prediction processing.' });
+        if (!mlResponse.ok) {
+            const errorData = await mlResponse.json().catch(() => ({ error: 'ML service error' }));
+            console.error(`ML service error for area "${area}":`, mlResponse.status, errorData);
+            return sendJsonResponse(response, 500, { 
+                error: `ML service unavailable: ${errorData.detail || errorData.error || 'Unknown error'}` 
+            });
         }
 
-        try {
-            const parsedOutput = JSON.parse(stdoutData);
-            if (parsedOutput.error) { // Handle cases where script itself prints an error JSON to stdout
-                 console.error(`Prediction script returned an error in stdout: ${parsedOutput.error}`);
-                 return sendJsonResponse(response, 500, { error: `Prediction error: ${parsedOutput.error}` });
-            }
-            return sendJsonResponse(response, 200, parsedOutput);
-        } catch (error) {
-            console.error(`Error parsing waste prediction output for area "${area}": ${error.message}\nRaw output: ${stdoutData}`);
-            return sendJsonResponse(response, 500, { error: 'Failed to parse prediction output.' });
-        }
-    });
+        const predictionData = await mlResponse.json();
+        return sendJsonResponse(response, 200, predictionData);
 
-    pythonProcess.on('error', (error) => {
-        console.error(`Failed to start waste prediction script for area "${area}": ${error.message}`);
-        return sendJsonResponse(response, 500, { error: 'Failed to start prediction script.' });
-    });
+    } catch (error) {
+        console.error(`Error calling ML service for waste prediction for area "${area}": ${error.message}`);
+        return sendJsonResponse(response, 500, { 
+            error: 'Failed to connect to ML prediction service.' 
+        });
+    }
 };
 
 export const getOptimizedRoutes = async (request, response) => {
@@ -90,13 +74,8 @@ export const getOptimizedRoutes = async (request, response) => {
         return sendJsonResponse(response, 400, { error: 'Invalid date value.' });
     }
 
-    // Define paths
-    const scriptPath = path.resolve(process.cwd(), '../ml/optimize_routes.py');
-
     try {
         // Fetch pickup requests for the given date and status 'Pending'
-        // Note: MongoDB stores dates in UTC. Ensure your date querying strategy is robust.
-        // For a specific day, you might need a range query (start of day to end of day).
         const startOfDay = new Date(queryDate);
         startOfDay.setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(queryDate);
@@ -108,78 +87,69 @@ export const getOptimizedRoutes = async (request, response) => {
                 $lte: endOfDay
             },
             requestStatus: 'Pending'
-        }).select('requestId latitude longitude approxGarbageWeight -_id'); // Select specific fields
+        }).select('requestId latitude longitude approxGarbageWeight -_id');
 
         if (!pickupRequests || pickupRequests.length === 0) {
-            return sendJsonResponse(response, 200, { routes: [], status: "success", message: "No pending pickups for the selected date." });
+            return sendJsonResponse(response, 200, { 
+                routes: [], 
+                status: "success", 
+                message: "No pending pickups for the selected date." 
+            });
         }
 
-        // Prepare input for Python script
-        const depot_location = [5.6037, -0.1870]; // Accra, Ghana (Example, make configurable)
-        const truck_capacity_kg = 2000; // Example, make configurable
-        const max_stops_per_route = 10; // Example, make configurable
-
-        const inputJsonData = {
-            pickup_data: pickupRequests.map(req => req.toObject()), // Convert Mongoose docs to plain objects
-            depot_location,
-            truck_capacity_kg,
-            max_stops_per_route
+        // Prepare input for FastAPI route optimization
+        const routeOptimizationData = {
+            pickup_requests: pickupRequests.map(req => ({
+                citizen_id: req.requestId,
+                latitude: req.latitude,
+                longitude: req.longitude,
+                estimated_waste_volume_liters: (req.approxGarbageWeight || 50) * 1.2, // Convert kg to liters (rough estimate)
+                priority: "medium",
+                pickup_time_window_start: `${date}T08:00:00Z`,
+                pickup_time_window_end: `${date}T18:00:00Z`
+            })),
+            available_trucks: [
+                {
+                    truck_id: "truck_001",
+                    current_latitude: 5.6037, // Accra, Ghana depot
+                    current_longitude: -0.1870,
+                    capacity_liters: 2000,
+                    available_from: `${date}T08:00:00Z`,
+                    available_until: `${date}T18:00:00Z`
+                }
+            ]
         };
 
-        console.log(`Spawning route optimization script: python ${scriptPath}`);
-        const pythonProcess = spawn('python', [scriptPath]);
-
-        let stdoutData = '';
-        let stderrData = '';
-
-        pythonProcess.stdin.write(JSON.stringify(inputJsonData));
-        pythonProcess.stdin.end();
-
-        pythonProcess.stdout.on('data', (data) => {
-            stdoutData += data.toString();
+        // Call FastAPI route optimization service
+        const mlResponse = await fetch(`${ML_API_URL}/routes/optimize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(routeOptimizationData),
         });
 
-        pythonProcess.stderr.on('data', (data) => {
-            stderrData += data.toString();
-            console.error(`Route Optimization Script STDERR: ${data.toString()}`);
-        });
+        if (!mlResponse.ok) {
+            const errorData = await mlResponse.json().catch(() => ({ error: 'Route optimization service error' }));
+            console.error(`Route optimization service error for date "${date}":`, mlResponse.status, errorData);
+            return sendJsonResponse(response, 500, { 
+                error: `Route optimization service unavailable: ${errorData.detail || errorData.error || 'Unknown error'}` 
+            });
+        }
 
-        pythonProcess.on('close', (code) => {
-            console.log(`Route Optimization Script exited with code ${code}`);
-            if (stderrData || code !== 0) {
-                console.error(`Error during route optimization for date "${date}": ${stderrData || `Exited with code ${code}`}`);
-                 try {
-                    const errorJson = JSON.parse(stderrData); // Python script outputs JSON errors to stderr
-                    if (errorJson.error) {
-                        return sendJsonResponse(response, 500, { error: `Route optimization script error: ${errorJson.error}` });
-                    }
-                } catch (e) {
-                    // Not a JSON error from script, or malformed
-                }
-                return sendJsonResponse(response, 500, { error: 'Error during route optimization processing.' });
-            }
+        const optimizedRoutes = await mlResponse.json();
+        return sendJsonResponse(response, 200, optimizedRoutes);
 
-            try {
-                const parsedOutput = JSON.parse(stdoutData);
-                 if (parsedOutput.error) { // Handle cases where script itself prints an error JSON to stdout
-                    console.error(`Route optimization script returned an error in stdout: ${parsedOutput.error}`);
-                    return sendJsonResponse(response, 500, { error: `Optimization error: ${parsedOutput.error}` });
-                }
-                return sendJsonResponse(response, 200, parsedOutput);
-            } catch (error) {
-                console.error(`Error parsing route optimization output for date "${date}": ${error.message}\nRaw output: ${stdoutData}`);
-                return sendJsonResponse(response, 500, { error: 'Failed to parse route optimization output.' });
-            }
-        });
-
-        pythonProcess.on('error', (error) => {
-            console.error(`Failed to start route optimization script for date "${date}": ${error.message}`);
-            return sendJsonResponse(response, 500, { error: 'Failed to start route optimization script.' });
-        });
-
-    } catch (dbError) {
-        console.error(`Database error while fetching pickup requests for date "${date}": ${dbError.message}`);
-        return sendJsonResponse(response, 500, { error: 'Database error while fetching pickup requests.' });
+    } catch (error) {
+        if (error.name === 'MongoError' || error.message.includes('Database')) {
+            console.error(`Database error while fetching pickup requests for date "${date}": ${error.message}`);
+            return sendJsonResponse(response, 500, { error: 'Database error while fetching pickup requests.' });
+        } else {
+            console.error(`Error calling route optimization service for date "${date}": ${error.message}`);
+            return sendJsonResponse(response, 500, { 
+                error: 'Failed to connect to route optimization service.' 
+            });
+        }
     }
 };
 

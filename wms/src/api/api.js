@@ -1,6 +1,9 @@
+// API base URL - configurable via environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 export const getUsersList = async () => {
     try {
-        const res = await fetch('http://localhost:8000/users');
+        const res = await fetch(`${API_BASE_URL}/users`);
         if (res.ok) { // Check res.ok for success (status 200-299)
             const response = await res.json();
             return response;
@@ -23,7 +26,7 @@ export const getUsersList = async () => {
 
 export const getPickUpRequests = async () => {
     try {
-        const res = await fetch('http://localhost:8000/getAllPickUpRequests');
+        const res = await fetch(`${API_BASE_URL}/getAllPickUpRequests`);
         if (res.ok) {
             const response = await res.json();
             return response;
@@ -44,7 +47,7 @@ export const getPickUpRequests = async () => {
 
 export const getTrucksList = async () => {
     try {
-        const res = await fetch('http://localhost:8000/getTrucksList');
+        const res = await fetch(`${API_BASE_URL}/getTrucksList`);
         if (res.ok) {
             const response = await res.json();
             return response;
@@ -65,7 +68,7 @@ export const getTrucksList = async () => {
 
 export const getPendingPickUpRequests = async () => {
     try {
-        const res = await fetch('http://localhost:8000/getPendingPickUpRequests');
+        const res = await fetch(`${API_BASE_URL}/getPendingPickUpRequests`);
         if (res.ok) {
             const response = await res.json();
             return response;
@@ -86,7 +89,7 @@ export const getPendingPickUpRequests = async () => {
 
 export const getIdleTrucks = async () => {
     try {
-        const res = await fetch('http://localhost:8000/getIdleTrucks');
+        const res = await fetch(`${API_BASE_URL}/getIdleTrucks`);
         if (res.ok) {
             const response = await res.json();
             return response;
@@ -107,7 +110,7 @@ export const getIdleTrucks = async () => {
 
 export const getWastePredictionsAPI = async (area, days) => {
     try {
-        const url = `http://localhost:8000/api/ml/waste-prediction?area=${encodeURIComponent(area)}&days=${days}`;
+        const url = `${API_BASE_URL}/api/ml/waste-prediction?area=${encodeURIComponent(area)}&days=${days}`;
         const res = await fetch(url);
 
         // It's good practice to check if the response is ok before parsing JSON
@@ -131,7 +134,7 @@ export const getWastePredictionsAPI = async (area, days) => {
 
 export const getOptimizedRoutesAPI = async (date) => {
     try {
-        const url = `http://localhost:8000/api/ml/optimize-routes?date=${date}`;
+        const url = `${API_BASE_URL}/api/ml/optimize-routes?date=${date}`;
         const res = await fetch(url);
 
         if (!res.ok) {
@@ -150,7 +153,7 @@ export const getOptimizedRoutesAPI = async (date) => {
 
 export const getPickupHeatmapDataAPI = async (date) => {
     try {
-        const url = `http://localhost:8000/api/spatial/pickup-heatmap?date=${date}`;
+        const url = `${API_BASE_URL}/api/spatial/pickup-heatmap?date=${date}`;
         const res = await fetch(url);
 
         if (!res.ok) {
@@ -169,7 +172,7 @@ export const getPickupHeatmapDataAPI = async (date) => {
 
 export const generateDynamicRoutesAPI = async (date, num_trucks, vehicle_capacity_kg) => {
     try {
-        const url = `http://localhost:8000/api/fleet/generate-dynamic-routes`;
+        const url = `${API_BASE_URL}/api/fleet/generate-dynamic-routes`;
         const requestBody = { date };
         if (num_trucks !== undefined && num_trucks !== null) {
             requestBody.num_trucks = num_trucks;

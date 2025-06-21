@@ -1,0 +1,39 @@
+# Google Cloud Build configuration for StaGreen API
+steps:
+  # Build and deploy the FastAPI backend to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'stagreen-ml-api'
+      - '--source=./api'
+      - '--platform=managed'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+      - '--memory=4Gi'
+      - '--cpu=2'
+      - '--timeout=300'
+      - '--max-instances=10'
+      - '--set-env-vars=MONGODB_URI=${_MONGODB_URI},MAPS_API_KEY_GHANA=${_MAPS_API_KEY_GHANA},RETRAIN_API_KEY=${_RETRAIN_API_KEY}'
+
+  # Build and deploy the Node.js server to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'stagreen-main-server'
+      - '--source=./server'
+      - '--platform=managed'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--max-instances=20'
+      - '--set-env-vars=ML_API_URL=https://stagreen-ml-api-${PROJECT_ID}.run.app,MONGODB_URI=${_MONGODB_URI},PORT=8080'
+    
+substitutions:
+  _MONGODB_URI: 'mongodb+srv://Algorithmx:Sammyone%401@cluster0.3lja38l.mongodb.net/WMS?retryWrites=true&w=majority'
+  _MAPS_API_KEY_GHANA: 'AIzaSyDC_zOBfGLEFwKiFH85MhIPq2LVKyiaCfI'  
+  _RETRAIN_API_KEY: 'SDXw2fiP-10DfjgXe99AAYHLDXQjCKnabVNBENMbcXtYDnM9BdMf8hB4zVdhoT9H'
+
+options:
+  logging: CLOUD_LOGGING_ONLY 

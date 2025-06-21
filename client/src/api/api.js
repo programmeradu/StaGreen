@@ -14,10 +14,13 @@ const setLogin = (email, firstName) => {
     setCookie(email, firstName);
 }
 
+// API base URL - configurable via environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 export const postRegisterForm = async (finalValues) => {
     console.log(finalValues);
     try {
-        const res = await fetch('http://localhost:8000/add', {
+        const res = await fetch(`${API_BASE_URL}/add`, {
             method: 'POST',
             body: JSON.stringify(finalValues),
             headers: {
@@ -42,7 +45,7 @@ export const postPickUpRequest = async (finalValues) => {
     console.log("inside postPickUpRequest");
     console.log(finalValues);
     try{
-        const res = await fetch('http://localhost:8000/addPickUp', {
+        const res = await fetch(`${API_BASE_URL}/addPickUp`, {
             method: 'POST',
             body: JSON.stringify(finalValues),
             headers: {
@@ -63,7 +66,7 @@ export const postPickUpRequest = async (finalValues) => {
 export const getPickUpInfo = async (pickUpId) => {
     console.log("inside getPickUp Client");
     try {
-        const res = await fetch('http://localhost:8000/getPickUp');
+        const res = await fetch(`${API_BASE_URL}/getPickUp`);
         if (res.status === 200) {
             const response = await res.json();
             return response;
