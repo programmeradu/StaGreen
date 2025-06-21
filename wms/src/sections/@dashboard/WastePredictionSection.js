@@ -17,8 +17,10 @@ import {
     Fade
 } from '@mui/material';
 import { getWastePredictionsAPI } from '../../api/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import ErrorMessage from '../../components/ErrorMessage';
+// Update import paths for shared components
+import { LoadingSpinner, ErrorMessage } from '../../../../packages/ui-components/src';
+// Assuming index.js in packages/ui-components/src exports these.
+// Or, direct path: ../../../../packages/ui-components/src/feedback/LoadingSpinner';
 
 
 const WastePredictionSection = () => {

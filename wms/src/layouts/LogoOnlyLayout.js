@@ -2,7 +2,8 @@ import { Outlet } from 'react-router-dom';
 // material
 import { styled } from '@mui/material/styles';
 // components
-import Logo from '../components/Logo';
+// import Logo from '../components/Logo'; // OLD
+import { Logo } from '../../../packages/ui-components/src'; // NEW - Adjust path as needed
 
 // ----------------------------------------------------------------------
 

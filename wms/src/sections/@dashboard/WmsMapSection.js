@@ -10,8 +10,8 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import { TextField, Button, Box, Typography, Paper, CircularProgress, Grid } from '@mui/material'; // Removed Alert, Skeleton
 import { getOptimizedRoutesAPI, getPickupHeatmapDataAPI, generateDynamicRoutesAPI } from '../../api/api'; // Added generateDynamicRoutesAPI
-import LoadingSpinner from '../../components/LoadingSpinner';
-import ErrorMessage from '../../components/ErrorMessage';
+// Update import paths for shared components
+import { LoadingSpinner, ErrorMessage } from '../../../../packages/ui-components/src';
 
 // Fix for default Leaflet marker icons (Webpack issue)
 // Ensure you have 'file-loader' or similar for image assets if using require,

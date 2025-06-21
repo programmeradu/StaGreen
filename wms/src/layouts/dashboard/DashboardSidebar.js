@@ -9,7 +9,8 @@ import account from '../../_mock/account';
 // hooks
 import useResponsive from '../../hooks/useResponsive';
 // components
-import Logo from '../../components/Logo';
+// import Logo from '../../components/Logo'; // OLD
+import { Logo } from '../../../../packages/ui-components/src'; // NEW - Adjust path as needed
 import Scrollbar from '../../components/Scrollbar';
 import NavSection from '../../components/NavSection';
 //
