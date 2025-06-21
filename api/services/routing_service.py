@@ -2,9 +2,17 @@ import httpx # For Google Maps API call
 import math
 import logging
 from typing import List, Dict, Tuple, Any, Optional
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
 from fastapi import HTTPException # For raising HTTP errors within service
+
+try:
+    from ortools.constraint_solver import routing_enums_pb2
+    from ortools.constraint_solver import pywrapcp
+    ORTOOLS_AVAILABLE = True
+except ImportError:
+    ORTOOLS_AVAILABLE = False
+    # Create dummy classes for type hints when ortools is not available
+    routing_enums_pb2 = None
+    pywrapcp = None
 
 from ..config import settings # For MAPS_API_KEY_GHANA
 # Assuming Pydantic models for input/output clarity if complex, or use TypedDicts
@@ -112,6 +120,10 @@ async def solve_vehicle_routing_problem(
     locations_with_ids: List of dicts, first element is depot. Each dict needs 'bin_id', 'latitude', 'longitude'.
     demands: List of demands corresponding to locations_with_ids. demands[0] is for depot (0).
     """
+    if not ORTOOLS_AVAILABLE:
+        logger.error("Cannot solve vehicle routing: OR-Tools not available in this environment.")
+        raise HTTPException(status_code=503, detail="Route optimization service unavailable in this deployment.")
+    
     if not locations_with_ids or len(locations_with_ids) <= 1: # Need at least depot and one stop
         logger.info("Not enough locations for routing (need depot + at least one stop).")
         return []

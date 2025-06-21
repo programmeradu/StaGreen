@@ -1,6 +1,16 @@
-import pandas as pd
-from sklearn.model_selection import train_test_split # If splitting for local validation
-from sklearn.ensemble import GradientBoostingRegressor
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
+try:
+    from sklearn.model_selection import train_test_split # If splitting for local validation
+    from sklearn.ensemble import GradientBoostingRegressor
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+
 import joblib
 from datetime import datetime
 from typing import Optional
@@ -19,8 +29,12 @@ MODEL_PATH = os.path.join(MODEL_DIR, "waste_predictor_ghana.joblib")
 # Ensure MODEL_DIR exists
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-def fetch_waste_readings_data() -> pd.DataFrame:
+def fetch_waste_readings_data():
     """Fetches all historical data from the waste_readings collection."""
+    if not PANDAS_AVAILABLE:
+        logger.error("Cannot fetch data: pandas not available in this environment.")
+        return None
+        
     try:
         waste_readings_collection = get_collection("waste_readings")
         # Fetch all readings. For very large datasets, consider fetching in chunks or specific ranges.
@@ -36,7 +50,7 @@ def fetch_waste_readings_data() -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Error fetching waste readings: {e}", exc_info=True)
         # Depending on desired behavior, could return empty DF or re-raise
-        return pd.DataFrame()
+        return pd.DataFrame() if PANDAS_AVAILABLE else None
 
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """Processes raw data and generates features from reading_timestamp."""
@@ -73,6 +87,10 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def train_waste_prediction_model():
     """Trains a GradientBoostingRegressor model and saves it."""
+    if not PANDAS_AVAILABLE or not SKLEARN_AVAILABLE:
+        logger.error("Cannot train model: Required ML libraries (pandas/sklearn) not available in this environment.")
+        return False
+        
     df = fetch_waste_readings_data()
     if df.empty:
         logger.error("Cannot train model: No data fetched.")
