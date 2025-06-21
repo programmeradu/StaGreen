@@ -1,48 +1,54 @@
 # Deploy all frontend components to Google Cloud
 steps:
   # Build and deploy client (main React app)
-  - name: 'node:18'
-    entrypoint: 'bash'
+  - name: "node:18"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
         cd client
         echo "REACT_APP_API_URL=https://stagreen-main-server-${PROJECT_ID}.run.app" > .env
         echo "REACT_APP_TOMTOM_API_KEY=g9V9sGqvIMdVtmAgA1gjsBcXyV7Qc1gg" >> .env
         npm install
         npm run build
-        
-  # Deploy client to Cloud Storage
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', '-r', 'client/build/*', 'gs://stagreen-client-${PROJECT_ID}']
 
-  # Build and deploy WMS dashboard  
-  - name: 'node:18'
-    entrypoint: 'bash'
+  # Deploy client to Cloud Storage
+  - name: "gcr.io/cloud-builders/gsutil"
+    args: ["cp", "-r", "client/build/*", "gs://stagreen-client-${PROJECT_ID}"]
+
+  # Build and deploy WMS dashboard
+  - name: "node:18"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
         cd wms
         echo "REACT_APP_API_URL=https://stagreen-main-server-${PROJECT_ID}.run.app" > .env
         npm install
         npm run build
-        
+
   # Deploy WMS to Cloud Storage
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', '-r', 'wms/build/*', 'gs://stagreen-wms-${PROJECT_ID}']
+  - name: "gcr.io/cloud-builders/gsutil"
+    args: ["cp", "-r", "wms/build/*", "gs://stagreen-wms-${PROJECT_ID}"]
 
   # Build and deploy truck dashboard
-  - name: 'node:18'
-    entrypoint: 'bash'
+  - name: "node:18"
+    entrypoint: "bash"
     args:
-      - '-c'
+      - "-c"
       - |
         cd truck-dashboard
         echo "REACT_APP_API_URL=https://stagreen-main-server-${PROJECT_ID}.run.app" > .env
         echo "REACT_APP_TOMTOM_API_KEY=g9V9sGqvIMdVtmAgA1gjsBcXyV7Qc1gg" >> .env
         npm install  
         npm run build
-        
+
   # Deploy truck dashboard to Cloud Storage
-  - name: 'gcr.io/cloud-builders/gsutil'
-    args: ['cp', '-r', 'truck-dashboard/build/*', 'gs://stagreen-trucks-${PROJECT_ID}'] 
+  - name: "gcr.io/cloud-builders/gsutil"
+    args:
+      [
+        "cp",
+        "-r",
+        "truck-dashboard/build/*",
+        "gs://stagreen-trucks-${PROJECT_ID}",
+      ]
