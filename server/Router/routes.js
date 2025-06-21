@@ -3,6 +3,7 @@ import { addUser, getUsers, addPickUp, getPickUp, getPickUpList, trackPickUp, de
 import { getAllPickUpRequests, getPendingPickUpRequests, getIdleTrucks, getTrucksList, getAvailableSlot, addRoute, getRoute, pickUpComplete } from "../controllers/admin-controller.js";
 import { getWastePrediction, getOptimizedRoutes, getPickupHeatmapData } from "../controllers/ml-controller.js";
 import { detectBinsInImage } from "../controllers/cv-controller.js";
+import { generateDynamicRoutes } from "../controllers/fleet-controller.js";
 
 const route = Express.Router();
 
@@ -54,6 +55,10 @@ route.get('/api/spatial/pickup-heatmap', getPickupHeatmapData);
 //--------------------------------------------------------------------
 // Computer Vision Features
 route.post('/api/cv/detect-bins', detectBinsInImage);
+
+//--------------------------------------------------------------------
+// Fleet Management / Dynamic Routing
+route.post('/api/fleet/generate-dynamic-routes', generateDynamicRoutes);
 
 
 export default route;

@@ -166,3 +166,48 @@ export const getPickupHeatmapDataAPI = async (date) => {
         return { error: error.message || 'Failed to fetch pickup heatmap data.' };
     }
 };
+
+export const generateDynamicRoutesAPI = async (date, num_trucks, vehicle_capacity_kg) => {
+    try {
+        const url = `http://localhost:8000/api/fleet/generate-dynamic-routes`;
+        const requestBody = { date };
+        if (num_trucks !== undefined && num_trucks !== null) {
+            requestBody.num_trucks = num_trucks;
+        }
+        if (vehicle_capacity_kg !== undefined && vehicle_capacity_kg !== null) {
+            requestBody.vehicle_capacity_kg = vehicle_capacity_kg;
+        }
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!res.ok) {
+            let parsedError = { message: `HTTP error! status: ${res.status}` }; // Default error
+            try {
+                // Attempt to parse the error response from the backend
+                const errorData = await res.json();
+                parsedError = errorData || parsedError; // Use backend error if available
+            } catch (e) {
+                // If parsing fails, stick with the default HTTP error
+                console.error('Failed to parse error JSON from backend:', e);
+            }
+            console.error('Error generating dynamic routes:', res.status, res.statusText, parsedError);
+            return {
+                error: parsedError.error || parsedError.message || 'Failed to generate dynamic routes',
+                details: parsedError.details,
+                status: res.status
+            };
+        }
+
+        const response = await res.json();
+        return response;
+    } catch (error) {
+        console.error('Error while calling generateDynamicRoutesAPI:', error);
+        return { error: error.message || 'Network request failed' };
+    }
+};

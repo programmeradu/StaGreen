@@ -9,7 +9,7 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import { TextField, Button, Box, Typography, Paper, CircularProgress, Grid } from '@mui/material'; // Removed Alert, Skeleton
-import { getOptimizedRoutesAPI, getPickupHeatmapDataAPI } from '../../api/api';
+import { getOptimizedRoutesAPI, getPickupHeatmapDataAPI, generateDynamicRoutesAPI } from '../../api/api'; // Added generateDynamicRoutesAPI
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 
@@ -55,6 +55,13 @@ const WmsMapSection = () => {
   const [mapCenter, setMapCenter] = useState([5.6037, -0.1870]); // Default: Accra
   const [mapZoom, _setMapZoom] = useState(13); // Default zoom, setMapZoom is unused, prefixed with _ or remove
   const [dateError, setDateError] = useState('');
+
+  // State for OR-Tools dynamic routes
+  const [orToolsRoutesData, setOrToolsRoutesData] = useState(null);
+  const [loadingOrToolsRoutes, setLoadingOrToolsRoutes] = useState(false);
+  const [errorOrToolsRoutes, setErrorOrToolsRoutes] = useState('');
+  const [numTrucksForOrTools, setNumTrucksForOrTools] = useState('2'); // Default as string for TextField
+  const [vehicleCapacityForOrTools, setVehicleCapacityForOrTools] = useState('2000'); // Default as string
 
   // Function to update map center if data is available
   // This function is stable as setMapCenter is a state setter.
@@ -144,15 +151,58 @@ const WmsMapSection = () => {
     }
   }, [date, dateError, updateMapCenter]); // updateMapCenter is kept here as it's part of the effect of this callback
 
+  const handleGenerateOrToolsRoutes = useCallback(async () => {
+    if (!validateDate(date)) {
+      setErrorOrToolsRoutes(dateError || "Date is required.");
+      return;
+    }
+    // Basic validation for numTrucks and vehicleCapacity
+    const numTrucks = parseInt(numTrucksForOrTools, 10);
+    const capacity = parseInt(vehicleCapacityForOrTools, 10);
+    if (Number.isNaN(numTrucks) || numTrucks <= 0) {
+        setErrorOrToolsRoutes("Number of trucks must be a positive integer.");
+        return;
+    }
+    if (Number.isNaN(capacity) || capacity <= 0) {
+        setErrorOrToolsRoutes("Vehicle capacity must be a positive integer.");
+        return;
+    }
+
+    setLoadingOrToolsRoutes(true);
+    setErrorOrToolsRoutes('');
+    setOrToolsRoutesData(null); // Clear previous OR-Tools routes
+
+    try {
+      const result = await generateDynamicRoutesAPI(date, numTrucks, capacity);
+      if (result && result.error) {
+        setErrorOrToolsRoutes(result.error);
+      } else if (result && result.routes) {
+        setOrToolsRoutesData(result);
+        // Optionally, clear the old routesData if OR-Tools routes are preferred
+        // setRoutesData(null);
+      } else {
+        setErrorOrToolsRoutes('Failed to generate dynamic routes or no routes returned.');
+      }
+    } catch (e) {
+      console.error("Generate OR-Tools routes error:", e);
+      setErrorOrToolsRoutes(e.message || 'An unexpected error occurred while generating OR-Tools routes.');
+    } finally {
+      setLoadingOrToolsRoutes(false);
+    }
+  }, [date, dateError, numTrucksForOrTools, vehicleCapacityForOrTools]);
+
+
   const handleFetchAll = () => {
     // Ensure date is validated once before fetching both
     if (validateDate(date)) {
-        fetchRoutes();
+        fetchRoutes(); // For existing heuristic routes
         fetchHeatmap();
+        // Note: handleGenerateOrToolsRoutes is called by its own button
     } else {
-        // If date is invalid, set errors for both sections to give feedback
-        setErrorRoutes(dateError || "A valid date is required.");
-        setErrorHeatmap(dateError || "A valid date is required.");
+        // If date is invalid, set errors for relevant sections
+        setErrorRoutes(dateError || "A valid date is required for heuristic routes.");
+        setErrorHeatmap(dateError || "A valid date is required for heatmap.");
+        setErrorOrToolsRoutes(dateError || "A valid date is required for OR-Tools routes.");
     }
   };
 
@@ -162,38 +212,71 @@ const WmsMapSection = () => {
         WMS Map Data Viewer
       </Typography>
 
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+      {/* Date Picker and Main Fetch Button */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2, gap: 2, flexWrap: 'wrap' }}>
         <TextField
           type="date"
           label="Select Date"
           value={date}
           onChange={(e) => {
             setDate(e.target.value);
-            if (dateError) validateDate(e.target.value); // Re-validate if there was an error
+            if (dateError) validateDate(e.target.value);
           }}
           error={!!dateError}
           helperText={dateError}
           InputLabelProps={{ shrink: true }}
-          disabled={loadingRoutes || loadingHeatmap}
+          disabled={loadingRoutes || loadingHeatmap || loadingOrToolsRoutes}
           sx={{ width: { xs: '100%', sm: 'auto' }, minWidth: '180px' }}
         />
         <Button
           variant="contained"
           onClick={handleFetchAll}
-          disabled={loadingRoutes || loadingHeatmap}
-          size="large" // Make button a bit larger to match TextField height
-          sx={{ height: '56px' }} // Match TextField height
+          disabled={loadingRoutes || loadingHeatmap || loadingOrToolsRoutes}
+          size="large"
+          sx={{ height: '56px' }}
         >
-          {loadingRoutes || loadingHeatmap ? <CircularProgress size={24} color="inherit" /> : 'Fetch Map Data'}
+          { (loadingRoutes || loadingHeatmap) && !(loadingOrToolsRoutes) ? <CircularProgress size={24} color="inherit" /> : 'Fetch Heuristic Data'}
         </Button>
       </Box>
 
-      <ErrorMessage error={errorRoutes} title="Route Data Error" sx={{ mb: 1 }} />
-      <ErrorMessage error={errorHeatmap} title="Heatmap Data Error" sx={{ mb: 2 }} />
+      {/* OR-Tools Controls */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3, gap: 2, flexWrap: 'wrap' }}>
+        <TextField
+            label="Number of Trucks (OR-Tools)"
+            type="number"
+            value={numTrucksForOrTools}
+            onChange={(e) => setNumTrucksForOrTools(e.target.value)}
+            inputProps={{ min: "1" }}
+            disabled={loadingOrToolsRoutes || loadingRoutes || loadingHeatmap} // Disable if any main loading active
+            sx={{ width: { xs: 'calc(50% - 8px)', sm: 'auto' } }} // Adjust width for two fields
+        />
+        <TextField
+            label="Vehicle Capacity (kg, OR-Tools)"
+            type="number"
+            value={vehicleCapacityForOrTools}
+            onChange={(e) => setVehicleCapacityForOrTools(e.target.value)}
+            inputProps={{ min: "1" }}
+            disabled={loadingOrToolsRoutes || loadingRoutes || loadingHeatmap}
+            sx={{ width: { xs: 'calc(50% - 8px)', sm: 'auto' } }}
+        />
+        <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleGenerateOrToolsRoutes}
+            disabled={loadingOrToolsRoutes || loadingRoutes || loadingHeatmap}
+            size="large"
+            sx={{ height: '56px', width: { xs: '100%', sm: 'auto'} }}
+        >
+            {loadingOrToolsRoutes ? <CircularProgress size={24} color="inherit" /> : 'Generate Dynamic Routes (OR-Tools)'}
+        </Button>
+      </Box>
+
+      <ErrorMessage error={errorRoutes} title="Heuristic Route Data Error" sx={{ mb: 1 }} />
+      <ErrorMessage error={errorHeatmap} title="Heatmap Data Error" sx={{ mb: 1 }} />
+      <ErrorMessage error={errorOrToolsRoutes} title="OR-Tools Route Data Error" sx={{ mb: 2 }} />
 
 
-      {(loadingRoutes || loadingHeatmap) && !(routesData || heatmapData) ? (
-        // Show main spinner instead of Skeleton when both are loading and no data is yet available for the map area
+      {(loadingRoutes || loadingHeatmap || loadingOrToolsRoutes) && !(routesData || heatmapData || orToolsRoutesData) ? (
         <LoadingSpinner sx={{ height: 500, my: 2, border: '1px solid #ccc', borderRadius: '8px', boxSizing: 'border-box' }} />
       ) : (
         <Box sx={{
@@ -202,7 +285,7 @@ const WmsMapSection = () => {
             marginTop: '20px',
             border: '1px solid #ccc',
             borderRadius: '8px',
-            position: 'relative' // For potential overlay of individual loaders if needed
+            position: 'relative'
         }}>
         <MapContainer center={mapCenter} zoom={mapZoom} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
           <TileLayer
@@ -210,22 +293,22 @@ const WmsMapSection = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
 
-          {/* Render Optimized Routes */}
-          {routesData && routesData.routes && routesData.routes.map((route, routeIndex) => {
+          {/* Render OR-Tools Routes if available, otherwise fallback to heuristic routes */}
+          {orToolsRoutesData && orToolsRoutesData.routes && orToolsRoutesData.routes.map((route, routeIndex) => {
             const positions = route
               .filter(p => typeof p.latitude === 'number' && typeof p.longitude === 'number')
               .map(pickup => [pickup.latitude, pickup.longitude]);
 
-            const routeColor = ['blue', 'green', 'purple', 'orange'][routeIndex % 4];
+            const routeColor = ['#FF6347', '#32CD32', '#1E90FF', '#FFD700'][routeIndex % 4]; // Different colors for OR-Tools
 
             return (
-              <React.Fragment key={`route-${routeIndex}`}>
-                {positions.length > 0 && <Polyline positions={positions} pathOptions={{ color: routeColor }} />}
+              <React.Fragment key={`ortools-route-${routeIndex}`}>
+                {positions.length > 0 && <Polyline positions={positions} pathOptions={{ color: routeColor, weight: 5 }} />}
                 {route.map((pickup, pickupIndex) => (
                   (typeof pickup.latitude === 'number' && typeof pickup.longitude === 'number') && (
-                    <Marker key={`route-${routeIndex}-pickup-${pickupIndex}`} position={[pickup.latitude, pickup.longitude]}>
+                    <Marker key={`ortools-route-${routeIndex}-pickup-${pickupIndex}`} position={[pickup.latitude, pickup.longitude]}>
                       <Popup>
-                        <div><strong>Request ID:</strong> {pickup.requestId || 'N/A'}</div>
+                        <div><strong>Request ID:</strong> {pickup.requestId || 'N/A'} (OR-Tools)</div>
                         <div><strong>Weight:</strong> {pickup.approxGarbageWeight || 'N/A'} kg</div>
                         <div><strong>Order in route:</strong> {pickupIndex + 1}</div>
                       </Popup>
@@ -236,7 +319,33 @@ const WmsMapSection = () => {
             );
           })}
 
-          {/* Render Heatmap Data */}
+          {/* Fallback to heuristic routes if OR-Tools data is not present */}
+          {!orToolsRoutesData && routesData && routesData.routes && routesData.routes.map((route, routeIndex) => {
+            const positions = route
+              .filter(p => typeof p.latitude === 'number' && typeof p.longitude === 'number')
+              .map(pickup => [pickup.latitude, pickup.longitude]);
+
+            const routeColor = ['blue', 'darkgreen', 'purple', 'darkorange'][routeIndex % 4]; // Original colors
+
+            return (
+              <React.Fragment key={`heuristic-route-${routeIndex}`}>
+                {positions.length > 0 && <Polyline positions={positions} pathOptions={{ color: routeColor, dashArray: '5, 5' }} />}
+                {route.map((pickup, pickupIndex) => (
+                  (typeof pickup.latitude === 'number' && typeof pickup.longitude === 'number') && (
+                    <Marker key={`heuristic-route-${routeIndex}-pickup-${pickupIndex}`} position={[pickup.latitude, pickup.longitude]}>
+                      <Popup>
+                        <div><strong>Request ID:</strong> {pickup.requestId || 'N/A'} (Heuristic)</div>
+                        <div><strong>Weight:</strong> {pickup.approxGarbageWeight || 'N/A'} kg</div>
+                        <div><strong>Order in route:</strong> {pickupIndex + 1}</div>
+                      </Popup>
+                    </Marker>
+                  )
+                ))}
+              </React.Fragment>
+            );
+          })}
+
+          {/* Heatmap Data (always shown if available) */}
           {heatmapData && heatmapData.features && (
             <GeoJSON
               data={heatmapData}
@@ -278,22 +387,35 @@ const WmsMapSection = () => {
           <Paper elevation={1} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>Optimized Routes Data (Raw)</Typography>
             {loadingRoutes && !routesData && <LoadingSpinner size={24} />}
-            <ErrorMessage error={errorRoutes} title="Routes Error" sx={{ mt: 1 }} />
+            <ErrorMessage error={errorRoutes} title="Heuristic Routes Error" sx={{ mt: 1 }} />
             {routesData && !errorRoutes && (
-              <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '300px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
+              <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
                 {JSON.stringify(routesData, null, 2)}
               </Box>
             )}
-            {!loadingRoutes && !errorRoutes && !routesData && <Typography variant="body2">No route data loaded.</Typography>}
+            {!loadingRoutes && !errorRoutes && !routesData && <Typography variant="body2">No heuristic route data loaded.</Typography>}
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}> {/* Adjusted grid size */}
+          <Paper elevation={1} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>OR-Tools Routes (Raw)</Typography>
+            {loadingOrToolsRoutes && !orToolsRoutesData && <LoadingSpinner size={24} />}
+            <ErrorMessage error={errorOrToolsRoutes} title="OR-Tools Routes Error" sx={{ mt: 1 }} />
+            {orToolsRoutesData && !errorOrToolsRoutes && (
+               <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
+                {JSON.stringify(orToolsRoutesData, null, 2)}
+              </Box>
+            )}
+            {!loadingOrToolsRoutes && !errorOrToolsRoutes && !orToolsRoutesData && <Typography variant="body2">No OR-Tools route data generated.</Typography>}
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}> {/* Adjusted grid size */}
           <Paper elevation={1} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>Pickup Heatmap Data (GeoJSON - Raw)</Typography>
             {loadingHeatmap && !heatmapData && <LoadingSpinner size={24} />}
             <ErrorMessage error={errorHeatmap} title="Heatmap Error" sx={{ mt: 1 }} />
             {heatmapData && !errorHeatmap && (
-               <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '300px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
+               <Box component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '200px', overflowY: 'auto', bgcolor: 'grey.100', p:1, borderRadius: 1 }}>
                 {JSON.stringify(heatmapData, null, 2)}
               </Box>
             )}
