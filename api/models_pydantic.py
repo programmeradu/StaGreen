@@ -36,7 +36,8 @@ class BinDocument(BaseModel):
     # id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id") # If exposing MongoDB _id
     bin_id: str = Field(..., example="GH-ACC-BIN-001") # Ghana-specific ID format
     location: GeoLocation
-    capacity_liters: int = Field(..., gt=0) # Greater than 0
+    capacity_liters: Optional[int] = Field(None, gt=0) # Made optional, if kg is primary
+    capacity_kg: Optional[int] = Field(None, gt=0, example=100) # Added capacity_kg
     metadata: Optional[BinMetadata] = None
     # custom_fields: Optional[Dict[str, Any]] = None # For any extra data
 
@@ -110,3 +111,24 @@ class OptimizationResponse(BaseModel):
 # This file will grow as more API endpoints and services are defined.
 # These initial models align with the MongoDB structures provided by the user
 # and provide examples for future API I/O.
+
+# --- Fleet Vehicle Models ---
+
+class FleetVehicleDepot(BaseModel):
+    latitude: float = Field(..., example=5.6037)  # Accra example
+    longitude: float = Field(..., example=-0.1870)
+
+class FleetVehicleDocument(BaseModel):
+    # id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id") # If exposing MongoDB _id
+    vehicle_id: str = Field(..., example="GH-TRUCK-01") # Ghana-specific format
+    capacity_kg: int = Field(..., gt=0, example=5000)
+    # Depot location for this vehicle
+    start_depot: FleetVehicleDepot
+    # End depot might be different, or same as start for simplicity in many CVRP setups
+    end_depot: Optional[FleetVehicleDepot] = None
+    is_active: bool = Field(default=True)
+    # other specs like fuel_type, current_driver_id, etc. can be added later
+
+    class Config:
+        json_encoders = {ObjectId: str}
+        allow_population_by_field_name = True

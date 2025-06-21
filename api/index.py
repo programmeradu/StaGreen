@@ -3,7 +3,8 @@ import sys # Required for basic StreamHandler (though Uvicorn might override)
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from .database import connect_to_mongo, close_mongo_connection
-from .routers import prediction_router # Import the new prediction router
+from .routers import prediction_router, routing_router # Import the new routers
+from .services import data_service # Import the new data_service
 
 # Configure logger
 # Uvicorn will handle the basic configuration and output.
@@ -49,10 +50,14 @@ async def startup_event():
     try:
         connect_to_mongo()
         logger.info("Successfully connected to MongoDB.")
+        # Ensure sample data (synchronous call, FastAPI handles it in a thread)
+        data_service.ensure_sample_fleet_vehicles()
+        logger.info("Sample fleet vehicle check complete.")
+        data_service.ensure_sample_bins() # Add this line
+        logger.info("Sample bins check complete.")
     except Exception as e:
-        logger.critical(f"Failed to connect to MongoDB during startup: {e}", exc_info=True)
+        logger.critical(f"Error during startup: {e}", exc_info=True)
         # Depending on policy, you might want to exit or prevent app from fully starting
-        # For now, we log critical and let FastAPI proceed (or fail further if DB is essential immediately)
     logger.info("FastAPI application startup complete.")
 
 @app.on_event("shutdown")
@@ -69,6 +74,7 @@ async def read_root():
     return {"message": "Welcome to the StaGreen Predictive Fleet API (Ghana Edition)!"}
 
 # Further routers will be added here (e.g., for predictions, routing)
-app.include_router(prediction_router.router) # Include the prediction router
+app.include_router(prediction_router.router)
+app.include_router(routing_router.router) # Include the new routing router
 # Example: from .routers import another_router
 # app.include_router(another_router.router, prefix="/another", tags=["Another Section"])
