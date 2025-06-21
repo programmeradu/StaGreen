@@ -3,6 +3,7 @@ import sys # Required for basic StreamHandler (though Uvicorn might override)
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from .database import connect_to_mongo, close_mongo_connection
+from .routers import prediction_router # Import the new prediction router
 
 # Configure logger
 # Uvicorn will handle the basic configuration and output.
@@ -68,5 +69,6 @@ async def read_root():
     return {"message": "Welcome to the StaGreen Predictive Fleet API (Ghana Edition)!"}
 
 # Further routers will be added here (e.g., for predictions, routing)
-# Example: from .routers import predictions_router
-# app.include_router(predictions_router.router, prefix="/predict", tags=["Predictions"])
+app.include_router(prediction_router.router) # Include the prediction router
+# Example: from .routers import another_router
+# app.include_router(another_router.router, prefix="/another", tags=["Another Section"])

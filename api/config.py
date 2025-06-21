@@ -19,4 +19,14 @@ class Settings:
     if not MAPS_API_KEY_GHANA:
         raise ValueError("Missing environment variable: MAPS_API_KEY_GHANA")
 
+    # Retraining API Key
+    RETRAIN_API_KEY: str = os.getenv("RETRAIN_API_KEY")
+    if not RETRAIN_API_KEY: # Ensure it's set
+        raise ValueError("Missing environment variable: RETRAIN_API_KEY")
+    if RETRAIN_API_KEY == "your_secret_retrain_api_key_here":
+        # In a real production setup, you might want to log a warning or even prevent startup
+        # if the default example key is used. For this PoC, a print/log is fine.
+        print("WARNING: Using default example RETRAIN_API_KEY. This should be changed for production.")
+
+
 settings = Settings()
