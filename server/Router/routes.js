@@ -83,7 +83,11 @@ const pickupHeatmapRateLimiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
 });
-route.get("/api/spatial/pickup-heatmap", pickupHeatmapRateLimiter, getPickupHeatmapData);
+route.get(
+  "/api/spatial/pickup-heatmap",
+  pickupHeatmapRateLimiter,
+  getPickupHeatmapData,
+);
 
 // --------------------------------------------------------------------
 // Computer Vision Features
