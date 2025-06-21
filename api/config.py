@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 
 # Load environment variables from a .env file if it exists (for local development)
 # In production (e.g., Vercel), environment variables are set directly.
-load_dotenv()
+import os.path
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 class Settings:
     MONGODB_URI: str = os.getenv("MONGODB_URI")

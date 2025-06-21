@@ -3,6 +3,7 @@ from sklearn.model_selection import train_test_split # If splitting for local va
 from sklearn.ensemble import GradientBoostingRegressor
 import joblib
 from datetime import datetime
+from typing import Optional
 import os
 import logging
 
