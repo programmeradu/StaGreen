@@ -5,3 +5,4 @@ statsmodels
 prophet
 Pillow>=9.0.0
 flake8
+ortools==9.7.2996

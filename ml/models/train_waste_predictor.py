@@ -19,7 +19,7 @@ def train_and_save_model(area_data, area_name, models_dir='ml/models/'):
             area_data = area_data.set_index('date')
         except KeyError: # If 'date' column was already moved to index
             area_data.index = pd.to_datetime(area_data.index)
-    
+
     area_data = area_data.sort_index()
 
     # Resample to daily frequency, filling missing values if any (e.g., forward fill)
@@ -41,7 +41,7 @@ def train_and_save_model(area_data, area_name, models_dir='ml/models/'):
                         enforce_stationarity=False,
                         enforce_invertibility=False,
                         initialization='approximate_diffuse') # Added for robustness
-        
+
         results = model.fit(disp=False) # disp=False to reduce verbosity
 
         # Ensure the models directory exists
@@ -95,13 +95,13 @@ if __name__ == '__main__':
     for area in unique_areas:
         print(f"\nProcessing area: {area}")
         area_df = df[df['area'] == area].copy() # Use .copy() to avoid SettingWithCopyWarning
-        
+
         # The 'date' column should be set as index for SARIMAX
         area_df.set_index('date', inplace=True)
-        
+
         # Select only the 'total_daily_waste' column for the model
         area_ts = area_df[['total_daily_waste']]
 
         train_and_save_model(area_ts, area, models_dir=models_base_dir)
-    
+
     print("\nModel training process finished.")

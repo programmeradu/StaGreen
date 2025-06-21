@@ -3,9 +3,9 @@ import { sample } from 'lodash';
 
 // ----------------------------------------------------------------------
 
-const users = [...Array(24)].map((_, index) => ({
+const users = [...Array(24)].map((_unusedItem, _unusedIndex) => ({ // Prefixed unused parameters
   id: faker.datatype.uuid(),
-  // avatarUrl: `/static/mock-images/avatars/avatar_${index + 1}.jpg`,
+  // avatarUrl: `/static/mock-images/avatars/avatar_${_unusedIndex + 1}.jpg`, // If index was used for avatar
   name: faker.name.findName(),
   company: faker.company.companyName(),
   // isVerified: faker.datatype.boolean(),

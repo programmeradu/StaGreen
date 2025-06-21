@@ -31,7 +31,7 @@ def predict_waste(area_name, num_days_to_predict, models_dir):
         # For this implementation, we assume predictions start the day after the model's last observation.
         # A more robust way would be to store the end date of training data with the model.
         # However, the model object itself has the end date of the original data used for fitting if `fitted` on pandas series with DatetimeIndex
-        
+
         # Attempt to get the last date from the model's data representation if possible
         # This is a common attribute for statsmodels results objects for time series
         if hasattr(model_results, 'model') and hasattr(model_results.model, 'endog_dates') and model_results.model.endog_dates is not None and len(model_results.model.endog_dates) > 0:
@@ -51,7 +51,7 @@ def predict_waste(area_name, num_days_to_predict, models_dir):
 
 
         forecast_start_date = last_training_date + timedelta(days=1)
-        
+
         # Generate predictions
         forecast_result = model_results.get_forecast(steps=num_days_to_predict)
         predicted_means = forecast_result.predicted_mean
@@ -65,7 +65,7 @@ def predict_waste(area_name, num_days_to_predict, models_dir):
                 "date": date.strftime('%Y-%m-%d'),
                 "predicted_waste": round(value, 2) # Rounding for cleaner output
             })
-        
+
         return json.dumps({"area": area_name, "predictions": predictions_output}, indent=4)
 
     except Exception as e:
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     except ValueError as ve:
         print(json.dumps({"error": f"Invalid number of days: {str(ve)}"}), file=sys.stderr)
         sys.exit(1)
-    
+
     models_dir_arg = sys.argv[3]
 
     # Ensure models_dir ends with a slash for consistency, though os.path.join would be more robust
