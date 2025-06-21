@@ -1,4 +1,5 @@
 import Express from "express";
+import rateLimit from "express-rate-limit";
 import {
   addUser,
   getUsers,
@@ -30,10 +31,17 @@ import { generateDynamicRoutes } from "../controllers/fleet-controller.js";
 
 const route = Express.Router();
 
+// Rate limiter: maximum of 100 requests per 15 minutes
+const getUsersRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+});
+
 // defining add API and call addUser() function on post request sent
 // Citizen
 route.post("/add", addUser); // signup
-route.get("/users", getUsers); // login
+route.get("/users", getUsersRateLimiter, getUsers); // login
 
 route.post("/addPickUp", addPickUp); // add pick up  request to be scheduled
 route.get("/getPickUp", getPickUp); // add pick up  request to be scheduled
